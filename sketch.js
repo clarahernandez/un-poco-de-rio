@@ -235,7 +235,8 @@ function crearPanel() {
   fE.add(E, 'mostrar');
   fE.add(E, 'cantidad', 0, 30, 1).onChange(generarElementos);
   fE.add(E, 'tamano', 0.3, 3, 0.01).name('tamaño');
-  fE.add(E, 'velocidad', 0.5, 4, 0.5).name('cruces cada 30 s');
+  fE.add(E, 'velocidad', 0.5, 4, 0.5).name('pasadas cada 30 s');
+  fE.add(E, 'espera', 0, 6, 0.1).name('espera entre pasadas');
   fE.add(E, 'desenfoque', 0, 20, 0.5);
   fE.add(E, 'opacidad', 0, 1, 0.01);
   fE.addColor(E, 'color').name('color hojas');

@@ -145,7 +145,7 @@ function generarElementos() {
     elementos.push({
       ...forma,
       u: r(),                                  // dónde arranca en el recorrido
-      y: 0.08 + r() * 0.84,                    // 0 = lejos, 1 = orilla
+      y: 0.35 + r() * 0.55,                    // 0 = lejos, 1 = orilla (ni muy al fondo ni encima)
       tam: 0.7 + r() * 0.6,
       cruces: r() < 0.75 ? 1 : 2,              // cruces cada 30 s
       olaCic: 1 + Math.floor(r() * 3), olaFase: r() * Math.PI * 2, olaAmp: 0.003 + r() * 0.006,
@@ -186,7 +186,9 @@ function dibujarElementos(g, progreso, luz) {
     const base = g.height * 0.035 * cerca * e.tam * E.tamano;
     const margen = base * 2.5;
     const vueltas = Math.max(1, Math.round(e.cruces * E.velocidad * CONFIG.duracion / 30));
-    const x = g.width + margen - fract(e.u + vueltas * progreso) * (g.width + 2 * margen);
+    // Recorrido más largo que la pantalla: el resto del tiempo está fuera de cuadro
+    const recorrido = (g.width + 2 * margen) * (1 + E.espera);
+    const x = g.width + margen - fract(e.u + vueltas * progreso) * recorrido;
     const ola = Math.sin(Math.PI * 2 * e.olaCic * progreso + e.olaFase) * e.olaAmp * cerca;
     const y = g.height * (1 - horizonte + dy + ola);
     const rot = e.rot0 + e.giro * Math.sin(Math.PI * 2 * e.girCic * progreso + e.girFase);

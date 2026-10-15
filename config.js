@@ -44,9 +44,10 @@ const CONFIG = {
 
   elementos: {
     mostrar: true,
-    cantidad: 12,
+    cantidad: 1,
     tamano: 1.0,
-    velocidad: 1.0,      // cruces de pantalla cada 30 s
+    velocidad: 1.0,      // pasadas cada 30 s
+    espera: 2,           // tiempo fuera de cuadro entre pasadas (2 = el doble de lo que tarda en cruzar)
     desenfoque: 0,       // px
     opacidad: 1,
     color: '#4f6e2c',    // hojas de camalote a pleno sol; se oscurecen con la luz del momento
