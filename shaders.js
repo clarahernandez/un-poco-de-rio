@@ -9,6 +9,10 @@
 //  - Orilla: abajo, donde el agua es baja, se ve el fondo con las cáusticas,
 //    las figuras de luz que hacen las olas al funcionar como lentes.
 //
+// Estilo: para que no se vea como 3D pulido, las ondas se deforman (orgánico),
+// la perspectiva se puede achatar, los tonos se agrupan en pocas capas con
+// borde (como un grabado) y hay un grano fijo de papel.
+//
 // Las ondas suben y bajan en su lugar (ondas estacionarias). Con "corriente"
 // mayor a 0 además avanzan hacia la orilla.
 //
@@ -59,6 +63,12 @@ uniform float uHorizonte;     // altura del horizonte en pantalla (0 abajo, 1 ar
 uniform float uIslas;         // altura de las islas
 uniform float uReflejo;       // exponente del brillo: más alto = camino de luz más angosto
 uniform float uOrilla;        // cuánto fondo se ve en la orilla
+
+uniform float uPerspectiva;   // 0 = olas del mismo tamaño en todo el cuadro, 1 = perspectiva real
+uniform float uOrganico;      // cuánto se deforman las ondas
+uniform float uCapas;         // cantidad de tonos (0 = degradé continuo)
+uniform float uBorde;         // suavidad del borde entre tonos
+uniform float uGrano;         // textura de papel
 
 uniform vec3 uAgua;
 uniform vec3 uLuz;
@@ -137,9 +147,19 @@ void main() {
   } else {
     // Punto del agua que se ve en este pixel
     float dy = -rayo.y;
-    float z = ALTO * F / dy;
-    vec2 P = vec2(rayo.x * z / F, z);
-    float fp = z * z / (ALTO * F) / uRes.y;
+    float zReal = ALTO * F / dy;
+    vec2 Preal = vec2(rayo.x * zReal / F, zReal);
+    // Versión plana: las olas no se achican hacia arriba, solo se estiran a lo ancho
+    float zCerca = ALTO * F / uHorizonte;
+    vec2 Pplano = vec2(rayo.x * 1.8, zCerca + uv.y * 3.0);
+    vec2 P = mix(Pplano, Preal, uPerspectiva);
+    float z = P.y;
+    float fp = mix(3.0 / uRes.y, zReal * zReal / (ALTO * F) / uRes.y, uPerspectiva);
+
+    // Deformación orgánica (vueltas enteras por loop, así sigue cerrando)
+    vec2 w = vec2(sin(P.y * 1.7 + sin(P.x * 0.8 + uFase)),
+                  sin(P.x * 1.3 - cos(P.y * 1.1 - 2.0 * uFase)));
+    P += uOrganico * 0.35 * w;
 
     vec2 g; vec3 Hs;
     olas(P, fp, g, Hs);
@@ -154,9 +174,10 @@ void main() {
     // Camino de luz del sol / la luna
     float brillo = pow(max(dot(R, uSol), 0.0), uReflejo) * uSolVis
                  + pow(max(dot(R, uLuna), 0.0), uReflejo * 1.5) * uLunaVis * 0.6;
+    // Con capas, el brillo es una mancha plana de luz en vez de un lustre
+    if (uCapas > 0.5) brillo = smoothstep(0.3, 0.32 + uBorde * 0.6, brillo) * 0.6;
 
     // Fondo de la orilla con cáusticas, se pierde en el agua barrosa
-    float zCerca = ALTO * F / uHorizonte;
     float claridad = uOrilla * exp(-(z - zCerca) * (0.6 + 2.5 * uTurbidez));
     vec3 l = vec3(
       luzEn(Hs, uD * (1.0 - uDispersion)),
@@ -172,6 +193,18 @@ void main() {
   }
 
   col = 1.0 - exp(-col * uExpo * 1.6);
+
+  // Pocas capas de tono con borde, como un grabado o papel recortado
+  if (uCapas > 0.5) {
+    float lum = max(dot(col, vec3(0.299, 0.587, 0.114)), 0.001);
+    float f = lum * uCapas;
+    float q = (floor(f) + smoothstep(0.5 - uBorde, 0.5 + uBorde, fract(f)) + 0.3) / (uCapas + 0.3);
+    col *= q / lum;
+  }
+
+  // Grano de papel: fijo, no cambia con el tiempo
+  float papel = hash(floor(gl_FragCoord.xy)) * 0.6 + hash(floor(gl_FragCoord.xy / 3.0) + 17.0) * 0.4;
+  col *= 1.0 + (papel - 0.5) * uGrano * 0.18;
 
   float v = smoothstep(1.15, 0.35, length((vUv - 0.5) * vec2(aspecto, 1.0)) * 1.1);
   col *= mix(1.0, v, uVineta);

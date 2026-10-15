@@ -47,9 +47,8 @@ function draw() {
   const E = CONFIG.elementos;
   if (E.mostrar && elementos.length) {
     // Los camalotes toman la luz del momento: de día se ven, de noche son siluetas
-    const base = hexARgb(E.color);
-    const color = base.map((v, n) => 255 * v * Math.min(1, 0.15 + m.luz[n] * m.intensidad * (0.3 + 0.7 * m.solVis)));
-    dibujarElementos(sombras, p, color);
+    const luz = m.luz.map((v) => Math.min(1, 0.15 + v * m.intensidad * (0.3 + 0.7 * m.solVis)));
+    dibujarElementos(sombras, p, luz);
     push();
     drawingContext.filter = E.desenfoque > 0 ? `blur(${E.desenfoque}px)` : 'none';
     tint(255, E.opacidad * 255);
@@ -122,6 +121,13 @@ function dibujarAgua(p, m, agitacion) {
   shaderAgua.setUniform('uIslas', S.islas);
   shaderAgua.setUniform('uReflejo', Math.pow(2000, 1 - S.reflejo) * Math.pow(20, S.reflejo));
   shaderAgua.setUniform('uOrilla', S.orilla);
+
+  const E = CONFIG.estilo;
+  shaderAgua.setUniform('uPerspectiva', E.perspectiva);
+  shaderAgua.setUniform('uOrganico', E.organico);
+  shaderAgua.setUniform('uCapas', E.capas);
+  shaderAgua.setUniform('uBorde', E.borde);
+  shaderAgua.setUniform('uGrano', E.grano);
   shaderAgua.setUniform('uSol', m.sol);
   shaderAgua.setUniform('uLuna', m.luna);
   shaderAgua.setUniform('uSolVis', m.solVis);
@@ -151,11 +157,13 @@ function momentoActual(p) {
     m[c] = ca.map((v, n) => lerp(v, cb[n], t));
   }
 
-  // El sol sale por la izquierda en 0.25, pasa alto (fuera de cuadro) y se
-  // pone por la derecha en 0.75. La luna hace lo mismo de noche, más baja.
+  // Miramos río abajo: el sol sale a nuestra espalda en 0.25, pasa por
+  // arriba (un poco a la derecha, hacia el norte) y se pone de frente, en el
+  // horizonte, en 0.75. La luna hace lo mismo de noche: sale atrás en 0.75
+  // y se pone de frente en 0.25.
   const ang = TWO_PI * (p - 0.25);
-  m.sol = direccion(-Math.cos(ang) * 0.75, Math.sin(ang) * 0.9);
-  m.luna = direccion(Math.cos(ang) * 0.75, -Math.sin(ang) * 0.28);
+  m.sol = direccion(Math.sin(ang) * 0.3, Math.sin(ang) * 0.9, -Math.cos(ang));
+  m.luna = direccion(-Math.sin(ang) * 0.3, -Math.sin(ang) * 0.7, Math.cos(ang));
   m.solVis = suave(-0.03, 0.04, m.sol[1]);
   m.lunaVis = suave(-0.03, 0.04, m.luna[1]) * (1 - m.solVis);
   return m;
@@ -163,9 +171,9 @@ function momentoActual(p) {
 
 const COLORES_MOMENTO = ['cielo', 'horizonte', 'islas', 'agua', 'luz'];
 
-function direccion(x, y) {
-  const l = Math.hypot(x, y, 1);
-  return [x / l, y / l, 1 / l];
+function direccion(x, y, z) {
+  const l = Math.hypot(x, y, z);
+  return [x / l, y / l, z / l];
 }
 
 function suave(a, b, x) {
@@ -197,6 +205,13 @@ function crearPanel() {
   fS.add(S, 'reflejo', 0, 1, 0.01).name('ancho del reflejo');
   fS.add(S, 'orilla', 0, 1, 0.01).name('fondo en la orilla');
 
+  const fEst = panel.addFolder('Estilo');
+  fEst.add(CONFIG.estilo, 'perspectiva', 0, 1, 0.01);
+  fEst.add(CONFIG.estilo, 'organico', 0, 2, 0.01).name('orgánico');
+  fEst.add(CONFIG.estilo, 'capas', 0, 10, 1).name('capas de tono (0 = no)');
+  fEst.add(CONFIG.estilo, 'borde', 0.01, 0.5, 0.01).name('borde suave');
+  fEst.add(CONFIG.estilo, 'grano', 0, 1, 0.01).name('grano de papel');
+
   const fA = panel.addFolder('Agua');
   fA.add(A, 'agitacion', 0, 3, 0.01).name('agitación');
   fA.add(A, 'velocidad', 0, 4, 0.05);
@@ -223,7 +238,8 @@ function crearPanel() {
   fE.add(E, 'velocidad', 0.5, 4, 0.5).name('cruces cada 30 s');
   fE.add(E, 'desenfoque', 0, 20, 0.5);
   fE.add(E, 'opacidad', 0, 1, 0.01);
-  fE.addColor(E, 'color').name('color');
+  fE.addColor(E, 'color').name('color hojas');
+  fE.addColor(E, 'colorFlor').name('color flores');
   fE.add(E, 'semilla', 1, 999, 1).onChange(generarElementos);
 
   const fM = panel.addFolder('Momentos del día');
