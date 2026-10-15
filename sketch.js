@@ -192,7 +192,7 @@ function crearPanel() {
   fT.add(estado, 'momento').name('ahora').listen().disable();
 
   const fS = panel.addFolder('Escena');
-  fS.add(S, 'horizonte', 0.3, 0.9, 0.01).name('altura horizonte');
+  fS.add(S, 'horizonte', 0.3, 1.5, 0.01).name('altura horizonte');
   fS.add(S, 'islas', 0, 3, 0.01).name('altura islas');
   fS.add(S, 'reflejo', 0, 1, 0.01).name('ancho del reflejo');
   fS.add(S, 'orilla', 0, 1, 0.01).name('fondo en la orilla');

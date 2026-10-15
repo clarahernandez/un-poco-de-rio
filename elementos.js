@@ -135,7 +135,9 @@ function dibujarElementos(g, progreso, color) {
   // Primero los lejanos, así los cercanos quedan adelante
   const orden = [...elementos].sort((a, b) => a.y - b.y);
   for (const e of orden) {
-    const dy = horizonte * (0.04 + 0.96 * e.y);    // distancia al horizonte en pantalla
+    // Distancia al horizonte en pantalla, solo dentro de la parte visible del agua
+    const arriba = Math.max(0, horizonte - 1);
+    const dy = arriba + (horizonte - arriba) * (0.04 + 0.96 * e.y);
     const cerca = dy / horizonte;                   // 1 en la orilla, ~0 en el horizonte
     const aplastado = dy / Math.hypot(dy, F);       // el agua se ve de costado
     const base = g.height * 0.08 * cerca * e.tam * E.tamano;

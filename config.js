@@ -7,8 +7,8 @@ const CONFIG = {
   duracion: 30,
 
   escena: {
-    horizonte: 0.62,     // altura del horizonte en pantalla (0 abajo, 1 arriba)
-    islas: 1.0,          // altura de las islas de enfrente (0 = sin islas)
+    horizonte: 1.1,      // altura del horizonte en pantalla (0 abajo, 1 arriba; más de 1 = fuera de cuadro)
+    islas: 0,            // altura de las islas de enfrente (0 = sin islas)
     reflejo: 0.5,        // ancho del camino de luz del sol y la luna sobre el agua
     orilla: 0.8,         // cuánto se ve el fondo con cáusticas cerca de la playa
   },
