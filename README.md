@@ -18,7 +18,7 @@ Para arrancar en un momento fijo podés agregar parámetros a la URL, por ejempl
 
 ## Archivos
 
-- `config.js`: todos los ajustes: duración, escena (horizonte, islas, reflejo, orilla), agua, colores de cada momento del día y elementos.
+- `config.js`: todos los ajustes: duración, negro total (cuando se pone la luna), escena (horizonte, islas, reflejo, orilla), agua, colores de cada momento del día y elementos.
   Para la obra final, cambiá `duracion: 30` por `duracion: 360`.
 - `shaders.js`: el dibujo del cielo, las islas, el agua y la luz.
 - `elementos.js`: camalotes, hojas y ramas que flotan de derecha a izquierda, en perspectiva.
@@ -27,7 +27,14 @@ Para arrancar en un momento fijo podés agregar parámetros a la URL, por ejempl
 Si te gustan los ajustes que encontraste en el panel, apretá **Copiar ajustes**
 y pegá el resultado reemplazando el contenido de `config.js`.
 
-## Sensor de gente (para más adelante)
+## Versión domo (planetario)
 
-`setGente(0..1)` agita el agua según cuánta gente hay. Hoy se prueba con el
-slider "cantidad de gente"; más adelante una Raspberry puede mandar ese valor.
+`index.html?domo` dibuja solo las cáusticas del fondo del río en formato
+fulldome: un fisheye de 2048 × 2048 px (el centro es el cenit, el borde el
+horizonte, afuera negro). Las líneas de luz van siempre a brillo máximo y el
+agua quieta queda oscura, porque el proyector del domo tiene poca potencia.
+Los ajustes están en `domo` dentro de `config.js` y en la carpeta "Domo" del panel.
+
+En pantalla se ve achicado, pero se dibuja a 2048. Para mandarlo al domo,
+en OBS agregá una fuente "Navegador" con el archivo local, ancho y alto 2048,
+y la URL `index.html?domo&panel=0`.

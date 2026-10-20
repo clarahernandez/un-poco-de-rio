@@ -7,6 +7,9 @@
   <style>
     html, body { margin: 0; padding: 0; background: #000; overflow: hidden; }
     canvas { display: block; }
+    /* Domo: el lienzo es de 2048 × 2048; en pantalla se achica para entrar entero */
+    body.domo { display: flex; align-items: center; justify-content: center; height: 100vh; }
+    body.domo canvas { width: min(100vw, 100vh) !important; height: min(100vw, 100vh) !important; }
     .aviso {
       position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
       background: rgba(0, 0, 0, 0.75); color: #f3e6d3; padding: 8px 14px;

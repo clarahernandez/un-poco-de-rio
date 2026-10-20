@@ -18,6 +18,10 @@
 //
 // Para que el loop sea perfecto, cada onda da un número ENTERO de vueltas
 // por loop (uCic), así el final queda idéntico al principio.
+//
+// Versión domo (uDomo = 1): solo las cáusticas, en fisheye para el
+// planetario. El centro del círculo es el cenit y el borde, el horizonte;
+// afuera del círculo queda negro.
 
 const NUM_ONDAS = 16;
 
@@ -81,6 +85,22 @@ uniform vec3 uLuna;
 uniform float uSolVis;
 uniform float uLunaVis;
 
+uniform float uDomo;          // 1 = versión domo
+uniform float uDomoEscala;    // cuánto fondo entra en la cúpula (más = cáusticas más chicas)
+uniform float uDomoBrillo;    // cuánto se encienden las líneas de luz
+uniform float uDomoContraste; // más = el agua quieta queda más oscura
+uniform vec3 uDomoFondo;
+uniform vec3 uDomoLuz;
+uniform vec2 uDomoSol;        // dónde está el sol en el círculo (fuera del círculo = bajo el horizonte)
+uniform vec2 uDomoLuna;
+uniform float uDomoFoco;      // 0 = cáusticas parejas, 1 = brillan solo alrededor del sol / la luna
+uniform float uDomoRadio;     // tamaño de la zona encendida alrededor del sol / la luna
+uniform float uDomoHalo;      // resplandor sobre el agua quieta donde está el sol / la luna
+uniform float uDomoMetal;     // metalizado (amanecer / atardecer): brillos de metal martillado
+uniform vec3 uDomoLuzMetal;   // color del sol para el metalizado (no toma el azul de la luna)
+uniform float uDomoCielo;     // cuánto refleja el cielo el metal (lo que no mira al sol)
+uniform vec3 uDomoColCielo;
+
 // Islas bajas y chatas, con el borde irregular de los árboles
 float perfilIslas(float x) {
   float monte = 0.004 * sin(x * 3.0 + 1.3) + 0.003 * sin(x * 7.0 + 0.4);
@@ -136,7 +156,82 @@ float hash(vec2 p) {
   return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
+// Cáusticas sobre toda la cúpula. El fondo del río se reparte parejo según
+// el ángulo (fisheye equidistante), así las figuras tienen el mismo tamaño
+// en el cenit y cerca del horizonte.
+vec3 domo() {
+  vec2 c = (vUv - 0.5) * 2.0;
+  float r = length(c);
+  float px = 2.0 / uRes.y;
+  if (r > 1.0 + px) return vec3(0.0);
+
+  vec2 P = c * uDomoEscala;
+  vec2 w = vec2(sin(P.y * 1.7 + sin(P.x * 0.8 + uFase)),
+                sin(P.x * 1.3 - cos(P.y * 1.1 - 2.0 * uFase)));
+  P += uOrganico * 0.35 * w;
+
+  vec2 g; vec3 Hs;
+  olas(P, uDomoEscala * px, g, Hs);
+  vec3 l = vec3(
+    luzEn(Hs, uD * (1.0 - uDispersion)),
+    luzEn(Hs, uD),
+    luzEn(Hs, uD * (1.0 + uDispersion))
+  );
+
+  // Alto contraste: el agua quieta (l cerca de 1) queda en el color de fondo
+  // y solo las líneas donde la luz se concentra suben hasta el brillo máximo.
+  vec3 v = 1.0 - exp(-max(l - 1.0, 0.0) * uDomoBrillo);
+  v = pow(v, vec3(uDomoContraste * uNitidez));
+
+  // El sol y la luna cruzan la cúpula: las cáusticas se encienden donde están
+  // y fuera de esa zona casi se apagan
+  vec2 ds = c - uDomoSol, dl = c - uDomoLuna;
+  float k = 1.0 / (uDomoRadio * uDomoRadio);
+  float foco = max(exp(-dot(ds, ds) * k) * uSolVis, exp(-dot(dl, dl) * k) * uLunaVis);
+  v *= mix(1.0, foco, uDomoFoco);
+
+  // Resplandor: el agua quieta también se aclara alrededor del sol o la luna,
+  // así se ve dónde están aunque no haya líneas de luz justo ahí
+  float halo = max(exp(-dot(ds, ds) * k * 0.5) * uSolVis, exp(-dot(dl, dl) * k * 0.5) * uLunaVis);
+  vec3 fondo = mix(uDomoFondo, uDomoLuz, uDomoHalo * halo);
+
+  vec3 col = mix(fondo, uDomoLuz, v);
+
+  // Metalizado: con el sol bajo el agua brilla como metal martillado. La base
+  // se oscurece (y refleja un poco el cielo), las facetas inclinadas hacia el
+  // sol se encienden en bandas, el color de la luz se satura y las líneas
+  // más fuertes llegan al blanco.
+  if (uDomoMetal > 0.001) {
+    vec3 luzSat = pow(uDomoLuzMetal, vec3(2.0));
+    vec2 haciaSol = normalize(uDomoSol - c + 1e-4);
+    float zona = max(exp(-dot(ds, ds) * k * 0.2) * uSolVis, exp(-dot(dl, dl) * k * 0.2) * uLunaVis);
+    float faceta = smoothstep(0.02, 0.12, dot(g, haciaSol) * uDomoEscala) * zona;
+    vec3 base = mix(uDomoFondo * 0.45, uDomoColCielo * 0.6, uDomoCielo);
+    vec3 metal = mix(base, luzSat * 0.85, faceta);
+    metal = mix(metal, luzSat, v);
+    metal = mix(metal, vec3(1.0), smoothstep(0.6, 1.0, v));
+    col = mix(col, metal, uDomoMetal);
+  }
+
+  if (uCapas > 0.5) {
+    float lum = max(dot(col, vec3(0.299, 0.587, 0.114)), 0.001);
+    float f = lum * uCapas;
+    float q = (floor(f) + smoothstep(0.5 - uBorde, 0.5 + uBorde, fract(f))) / uCapas;
+    col *= q / lum;
+  }
+
+  // Borde del círculo sin serrucho
+  return col * smoothstep(1.0 + px, 1.0 - px, r);
+}
+
 void main() {
+  if (uDomo > 0.5) {
+    vec3 col = domo();
+    col += (hash(gl_FragCoord.xy + fract(uFase * 7.0)) - 0.5) / 255.0;
+    gl_FragColor = vec4(col, 1.0);
+    return;
+  }
+
   vec2 uv = vec2(vUv.x, 1.0 - vUv.y);
   float aspecto = uRes.x / uRes.y;
   vec3 rayo = vec3((uv.x - 0.5) * aspecto, uv.y - uHorizonte, F);
